@@ -1,92 +1,99 @@
-# Loku System Status
+# LOKU Status
 
-This repository is the data source for the **[Loku Status Page](https://loku.co.id/status.html)** and **[Loku Changelog](https://loku.co.id/changelog.html)**.
+The public status page for LOKU, and the heartbeat agent our servers run.
 
-All service incidents and product changelogs are published here as GitHub Issues and reflected on the public pages in real-time.
-
----
-
-## Status Page
-
-The status page reads GitHub Issues from this repository to display incident history, per-service availability, and auto-calculated SLA.
-
-**Live:** [loku.co.id/status.html](https://loku.co.id/status.html)
-
-### Incident Labels
-
-| Label | Required | Description |
-|---|---|---|
-| `incident` | ✅ | Marks the issue as an incident. Required to appear on the status page. |
-| `database-gateway` | optional | Affects **Database Gateway** status and SLA |
-| `rest-api-gateway` | optional | Affects **Rest API Gateway** status and SLA |
-| `web-app` | optional | Affects **Web APP** status and SLA |
-| `billing-system` | optional | Affects **Billing System** status and SLA |
-
-> An issue labeled only with `incident` (no service label) is treated as a **system-wide incident** — all services will be marked as disrupted and overall SLA will be impacted.
-
-### Per-Node Database Labels
-
-The **Database Gateway** is backed by multiple database cluster nodes. On the status page the Database Gateway row expands to show a per-node breakdown. To scope an incident to a single node, add the node label **in addition to** `incident`:
-
-| Label | Affects |
-|---|---|
-| `database-gateway` | The whole gateway — **all** DB nodes marked disrupted |
-| `database-gateway-db1` | Node **db-1** only |
-| `database-gateway-db2` | Node **db-2** only |
-| `database-gateway-db3` | Node **db-3** only |
-
-> **Convention:** the node label is the service slug with the node name as a suffix → `database-gateway-<node>`. To report an outage on one node, open a new issue with labels `incident` + `database-gateway-db2` (for example). A node-specific label keeps the incident isolated: other DB nodes and other services stay green, and per-node SLA is calculated independently. A bare `database-gateway` label (no suffix) still disrupts every node. Adding a new node later only requires registering its slug in the status page config (`DB_NODES`).
-
-### SLA Calculation
-
-SLA is calculated automatically from the duration of each incident within the **last 30 days**:
+Status data no longer comes from GitHub Issues. It comes from the LOKU API:
 
 ```
-SLA = (total_minutes_30d - total_downtime_minutes) / total_minutes_30d × 100
+server ──heartbeat every minute──▶ API  POST /v1/status/heartbeat
+                                   │  status:check (every minute): no heartbeat for
+                                   │  interval + grace → down, email to the team
+Central → Status Layanan ──────────┤  monitors, tokens, incidents, maintenance
+                                   ▼
+status page (this repo) ◀──── GET /v1/status  (public, cached 30 s)
 ```
 
-- Downtime is measured from `created_at` to `closed_at`. Open incidents count until the current time.
-- Overall SLA is derived from all `incident` issues.
-- Per-service SLA is derived from `incident` issues that also carry the service label.
+## Public page (`public/`)
 
-### Uptime Bar
+One static HTML file plus `config.js`. Host it apart from the main servers (for
+example Cloudflare Pages, Netlify, or a small separate VPS), so it still loads
+when the API is down. When the API cannot be reached, the page says so and shows
+the last state the visitor's browser saw.
 
-The 90-day uptime bar on the status page is color-coded per day:
+1. Set the API address in `public/config.js`:
+   ```js
+   window.LOKU_STATUS_CONFIG = { api: 'https://api.loku.co.id/v1', home: 'https://loku.co.id', refreshSeconds: 60 };
+   ```
+2. Publish the `public/` folder, for example at `https://status.loku.co.id`.
+3. Point the links at it:
+   - `STATUS_URL` in loku-app (Central);
+   - `LOKU_STATUS_URL` in loku-landing (footer, and the old `/status.html`).
 
-| Color | Meaning |
-|---|---|
-| Green | No incidents that day |
-| Yellow | Incident occurred and has been resolved |
-| Red | Active incident (issue still open) |
+Try it locally:
 
----
+```bash
+python3 -m http.server 8003 --directory public
+```
 
-## Changelog
+Set `api` in `config.js` to your local API first.
 
-The changelog page reads GitHub Issues from this repository labeled `changelog`.
+## Monitors, incidents, maintenance
 
-**Live:** [loku.co.id/changelog.html](https://loku.co.id/changelog.html)
+All of this is managed in **Central → Status Layanan**:
 
-### Changelog Labels
+- **Monitor**
+  - Add one per server or service. Its token is shown once; **Token baru** replaces it.
+  - Settings: group and description (shown publicly), heartbeat interval, grace time, shown/hidden on the public page, pause.
+- **Insiden**
+  - Statuses: diselidiki → penyebab ditemukan → dipantau → selesai.
+  - Each step has a message for customers.
+- **Maintenance**
+  - Has a time window. During the window, the affected monitors show as maintenance, do not send alerts, and do not lower the uptime.
+- **Pengaturan**
+  - Page title.
+  - The email that receives down/recovered alerts. The email texts are under Template Email.
 
-| Label | Required | Description |
-|---|---|---|
-| `changelog` | ✅ | Marks the issue as a changelog entry. Required to appear on the changelog page. |
-| `feature` | optional | New feature — shown as ✨ Fitur baru |
-| `fix` | optional | Bug fix — shown as 🔧 Perbaikan |
-| `improvement` | optional | Enhancement — shown as ⚡ Peningkatan |
-| `security` | optional | Security update — shown as 🔒 Keamanan |
+Uptime is counted per minute. A day bar turns orange for any degraded or down
+minute, and red for 5 or more down minutes.
 
----
+## Heartbeat agent (`agent/`)
 
-## Subscribe to Updates
+On each server:
 
-Watch this repository on GitHub to receive email notifications whenever a new incident or changelog is published.
+```bash
+git clone https://github.com/ComputingID/loku-status.git
+sudo loku-status/agent/install.sh https://api.loku.co.id/v1/status/heartbeat loku_hb_TOKEN_FROM_CENTRAL
+```
 
-👉 [Watch this repo](https://github.com/ComputingID/loku-status/subscription)
+This installs `/usr/local/bin/loku-heartbeat`, writes `/etc/loku-heartbeat.env`
+(mode 600) and a cron entry that runs every minute. It also sends a first
+heartbeat.
 
----
+The agent sends three things:
 
-## Contact
+- **status**
+  - `down` when an optional service check fails: `CHECK_URL` does not answer 2xx/3xx, or `CHECK_CMD` exits non-zero.
+  - `degraded` when disk use is at or above `DISK_WARN_PCT` (default 90), or load per CPU is at or above `LOAD_WARN_PER_CPU` (default 2).
+  - otherwise `up`.
+- **message**: what was wrong, or `ok`.
+- **metrics**: load, CPUs, memory %, disk %, uptime and host name. These are shown in Central only.
 
-For service inquiries, please reach us at **halo@loku.co.id** or visit [loku.co.id](https://loku.co.id).
+Example `/etc/loku-heartbeat.env` for a database server:
+
+```
+LOKU_HEARTBEAT_URL=https://api.loku.co.id/v1/status/heartbeat
+LOKU_HEARTBEAT_TOKEN=loku_hb_...
+CHECK_CMD="systemctl is-active --quiet mariadb"
+```
+
+The agent is optional. You can also send heartbeats in other ways:
+
+- **Plain cron:**
+  ```
+  * * * * * curl -fsS -m 10 -X POST https://api.loku.co.id/v1/status/heartbeat -H "Authorization: Bearer loku_hb_..."
+  ```
+- **A ping URL**, for uptime tools that only call a URL: `GET https://api.loku.co.id/v1/status/heartbeat/loku_hb_...`
+- **From an app itself** (for example a queue worker): POST the same request with a JSON body:
+  ```json
+  {"status": "up|degraded|down", "message": "...", "metrics": {...}}
+  ```
