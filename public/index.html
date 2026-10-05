@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Status LOKU</title>
+<meta name="description" content="Status terkini layanan LOKU: aplikasi, API, database, dan riwayat gangguan.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Crect width='96' height='96' rx='22' fill='%231d4ed8'/%3E%3Cpath d='M24 30L48 58L72 30' stroke='%23fff' stroke-width='11' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='48' cy='74' r='6.5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1d4ed8; --ink: #0f172a; --ink-2: #475569; --ink-3: #94a3b8; --line: #e2e8f0; --bg: #f8fafc; --card: #fff;
+    --up: #16a34a; --up-bg: #dcfce7; --deg: #d97706; --deg-bg: #fef3c7; --down: #dc2626; --down-bg: #fee2e2;
+    --maint: #2563eb; --maint-bg: #dbeafe; --none: #e2e8f0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #e2e8f0; --ink-2: #94a3b8; --ink-3: #64748b; --line: #1e293b; --bg: #0b1120; --card: #111a2e; --none: #1e293b;
+      --up-bg: #14532d55; --deg-bg: #78350f55; --down-bg: #7f1d1d55; --maint-bg: #1e3a8a55; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 'Plus Jakarta Sans', system-ui, sans-serif; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+  header { padding: 28px 0 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); text-decoration: none; font-weight: 800; font-size: 18px; }
+  .brand span.mark { width: 34px; height: 34px; border-radius: 10px; background: var(--primary); display: grid; place-items: center; }
+  .home { color: var(--ink-2); font-size: 13px; font-weight: 600; text-decoration: none; }
+  .home:hover { color: var(--primary); }
+  .banner { margin: 20px 0 28px; border-radius: 16px; padding: 20px 22px; display: flex; align-items: center; gap: 14px; font-weight: 700; font-size: 18px; }
+  .banner .dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 0 5px rgba(255,255,255,.35); }
+  .b-operational { background: var(--up); color: #fff; } .b-operational .dot { background: #fff; }
+  .b-degraded { background: var(--deg); color: #fff; } .b-degraded .dot { background: #fff; }
+  .b-partial_outage, .b-major_outage { background: var(--down); color: #fff; } .b-partial_outage .dot, .b-major_outage .dot { background: #fff; }
+  .b-maintenance { background: var(--maint); color: #fff; } .b-maintenance .dot { background: #fff; }
+  .b-unknown { background: var(--card); color: var(--ink); border: 1px solid var(--line); } .b-unknown .dot { background: var(--ink-3); }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); margin: 32px 0 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .notice { padding: 16px 18px; margin-bottom: 12px; border-left: 4px solid var(--down); }
+  .notice.minor { border-left-color: var(--deg); } .notice.maint { border-left-color: var(--maint); }
+  .notice h3 { margin: 0; font-size: 16px; }
+  .meta { color: var(--ink-2); font-size: 13px; }
+  .upd { margin-top: 10px; font-size: 14px; }
+  .upd b { font-weight: 700; }
+  .group-name { padding: 14px 18px 0; font-weight: 700; font-size: 14px; color: var(--ink-2); }
+  .mon { padding: 14px 18px; border-top: 1px solid var(--line); }
+  .group-name + .mon { border-top: 0; }
+  .mon-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+  .mon-name { font-weight: 700; }
+  .mon-desc { font-size: 13px; color: var(--ink-3); }
+  .pill { font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+  .s-up { color: var(--up); } .s-degraded { color: var(--deg); } .s-down { color: var(--down); } .s-maintenance { color: var(--maint); } .s-pending, .s-paused { color: var(--ink-3); }
+  .bars { display: flex; gap: 2px; margin-top: 10px; height: 30px; }
+  .bars i { flex: 1; border-radius: 2px; background: var(--none); }
+  .bars i.up { background: var(--up); } .bars i.degraded { background: var(--deg); } .bars i.down { background: var(--down); }
+  .bars-foot { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+  .past { padding: 14px 18px; border-top: 1px solid var(--line); }
+  .past:first-child { border-top: 0; }
+  .muted { color: var(--ink-3); }
+  .error { padding: 14px 18px; margin: 16px 0; border-radius: 12px; background: var(--down-bg); color: var(--ink); font-size: 14px; }
+  footer { margin: 40px 0; font-size: 13px; color: var(--ink-3); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  @media (max-width: 600px) { .bars i:nth-child(-n+60) { display: none; } .banner { font-size: 16px; } }
+</style>
+<script src="config.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" id="home-link" href="#">
+      <span class="mark" aria-hidden="true"><svg width="18" height="20" viewBox="0 0 96 116" fill="none"><path d="M10 30L48 76L86 30" stroke="#fff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="48" cy="100" r="10" fill="#fff"/></svg></span>
+      <span id="title">Status LOKU</span>
+    </a>
+    <a class="home" id="home-link-2" href="#">← loku.co.id</a>
+  </header>
+
+  <div id="banner" class="banner b-unknown" role="status" aria-live="polite"><span class="dot"></span><span id="banner-text">Memeriksa status…</span></div>
+  <div id="error" class="error" hidden></div>
+
+  <section id="active"></section>
+  <section id="services"></section>
+  <section id="history"></section>
+
+  <footer>
+    <span id="updated"></span>
+    <span>Layanan dari Computing ID</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  const CFG = Object.assign({ api: '/v1', home: 'https://loku.co.id', refreshSeconds: 60 }, window.LOKU_STATUS_CONFIG || {});
+  const CACHE = 'loku_status_last';
+  const $ = id => document.getElementById(id);
+  ['home-link', 'home-link-2'].forEach(id => $(id).href = CFG.home);
+
+  const OVERALL = {
+    operational: 'Semua layanan berjalan normal',
+    degraded: 'Sebagian layanan melambat',
+    partial_outage: 'Sebagian layanan terganggu',
+    major_outage: 'Layanan sedang terganggu',
+    maintenance: 'Sedang ada pemeliharaan terjadwal',
+  };
+  const STATE = { up: 'Normal', degraded: 'Melambat', down: 'Terganggu', maintenance: 'Pemeliharaan', pending: 'Belum ada data', paused: 'Tidak dipantau' };
+  const STEP = {
+    investigating: 'Diselidiki', identified: 'Penyebab ditemukan', monitoring: 'Dipantau', resolved: 'Selesai',
+    scheduled: 'Terjadwal', in_progress: 'Berlangsung', completed: 'Selesai',
+  };
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fmt = d => new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const day = d => new Date(d + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  function notice(i) {
+    const cls = i.kind === 'maintenance' ? 'maint' : (i.impact === 'minor' ? 'minor' : '');
+    const latest = (i.updates || [])[0];
+    const when = i.kind === 'maintenance' && i.starts_at ? `${fmt(i.starts_at)}${i.ends_at ? ' – ' + fmt(i.ends_at) : ''}` : 'Sejak ' + fmt(i.created_at);
+    return `<div class="card notice ${cls}">
+      <h3>${esc(i.title)}</h3>
+      <div class="meta">${esc(STEP[i.status] || i.status)} · ${esc(when)}${i.monitors && i.monitors.length ? ' · ' + esc(i.monitors.join(', ')) : ''}</div>
+      ${latest ? `<div class="upd">${esc(latest.message)} <span class="muted">(${fmt(latest.created_at)})</span></div>` : ''}
+    </div>`;
+  }
+
+  function monitor(m) {
+    const bars = (m.days || []).map(d =>
+      `<i class="${d.status === 'nodata' ? '' : d.status}" title="${esc(day(d.date))}: ${d.uptime === null ? 'tidak ada data' : d.uptime.toFixed(2) + '%'}"></i>`).join('');
+    return `<div class="mon">
+      <div class="mon-head">
+        <div><div class="mon-name">${esc(m.name)}</div>${m.description ? `<div class="mon-desc">${esc(m.description)}</div>` : ''}</div>
+        <span class="pill s-${m.status}">${STATE[m.status] || m.status}</span>
+      </div>
+      <div class="bars" aria-label="Uptime 90 hari terakhir">${bars}</div>
+      <div class="bars-foot"><span>90 hari lalu</span><span>${m.uptime_90d === null ? '' : m.uptime_90d.toFixed(2) + '% uptime'}</span><span>Hari ini</span></div>
+    </div>`;
+  }
+
+  function render(s, stale) {
+    document.title = s.title || 'Status LOKU';
+    $('title').textContent = s.title || 'Status LOKU';
+    $('banner').className = 'banner b-' + (stale ? 'unknown' : s.overall);
+    $('banner-text').textContent = stale ? 'Status terakhir yang diketahui' : (OVERALL[s.overall] || s.overall);
+
+    const maint = s.incidents.maintenance || [];
+    const upcoming = maint.filter(i => i.status === 'scheduled' && i.starts_at && new Date(i.starts_at) > new Date());
+    const now = [...(s.incidents.active || []), ...maint.filter(i => !upcoming.includes(i))];
+    $('active').innerHTML = (now.length ? '<h2>Sedang berlangsung</h2>' + now.map(notice).join('') : '')
+      + (upcoming.length ? '<h2>Pemeliharaan terjadwal</h2>' + upcoming.map(notice).join('') : '');
+
+    $('services').innerHTML = (s.groups || []).length
+      ? '<h2>Layanan</h2>' + s.groups.map(g => `<div class="card" style="margin-bottom:12px"><div class="group-name">${esc(g.name)}</div>${g.monitors.map(monitor).join('')}</div>`).join('')
+      : '';
+
+    const recent = s.incidents.recent || [];
+    $('history').innerHTML = '<h2>Riwayat 14 hari</h2><div class="card">' + (recent.length
+      ? recent.map(i => `<div class="past"><b>${esc(i.title)}</b><div class="meta">${i.kind === 'maintenance' ? 'Pemeliharaan' : 'Gangguan'} · ${fmt(i.created_at)} – ${fmt(i.resolved_at)}</div>${(i.updates || [])[0] ? `<div class="upd">${esc(i.updates[0].message)}</div>` : ''}</div>`).join('')
+      : '<div class="past muted">Tidak ada gangguan dalam 14 hari terakhir.</div>') + '</div>';
+
+    $('updated').textContent = 'Diperbarui ' + fmt(s.generated_at || Date.now());
+  }
+
+  async function load() {
+    try {
+      const res = await fetch(CFG.api.replace(/\/$/, '') + '/status', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = (await res.json()).data;
+      render(data, false);
+      $('error').hidden = true;
+      try { localStorage.setItem(CACHE, JSON.stringify(data)); } catch (e) {}
+    } catch (e) {
+      // The API itself may be down: say so, and show the last state we saw.
+      $('error').hidden = false;
+      $('error').textContent = 'Server LOKU tidak dapat dihubungi saat ini. Tim kami otomatis menerima peringatan. Coba muat ulang beberapa saat lagi.';
+      let last = null;
+      try { last = JSON.parse(localStorage.getItem(CACHE) || 'null'); } catch (err) {}
+      if (last) render(last, true);
+      else { $('banner').className = 'banner b-major_outage'; $('banner-text').textContent = 'Server LOKU tidak dapat dihubungi'; }
+    }
+  }
+
+  load();
+  setInterval(() => { if (document.visibilityState === 'visible') load(); }, CFG.refreshSeconds * 1000);
+})();
+</script>
+</body>
+</html>
